@@ -85,7 +85,7 @@ class MainClass extends JFrame implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost", 4445);  // Corrected port
+            Registry registry = LocateRegistry.getRegistry("localhost", 1243);  // Corrected port
             BankService bankService = (BankService) registry.lookup("BankService");
 
             if (e.getSource() == b1) {

@@ -56,7 +56,7 @@ public class RMIClient extends JFrame implements ActionListener {
             public void actionPerformed(ActionEvent ae) {
                 try {
                     // Kết nối tới RMI server
-                    Registry registry = LocateRegistry.getRegistry("localhost", 4445);
+                    Registry registry = LocateRegistry.getRegistry("localhost", 1243);
                     BankService bankService = (BankService) registry.lookup("BankService");
 
                     // Lấy thông tin đăng nhập
@@ -143,11 +143,13 @@ public class RMIClient extends JFrame implements ActionListener {
                 String cardNumber = tfCardNumber.getText();
                 String pin = new String(pfPin.getPassword());
 
+                // Log the data being sent
+                System.out.println("Attempting to sign up with FormNo: " + formNo + ", CardNumber: " + cardNumber + ", PIN: " + pin);
+
                 // Kết nối tới RMI server
                 try {
-                	Registry registry = LocateRegistry.getRegistry("localhost", 1231);
-
-                    BankService bankService = (BankService) registry.lookup("BankServices");
+                    Registry registry = LocateRegistry.getRegistry("localhost", 1243);
+                    BankService bankService = (BankService) registry.lookup("BankService");
 
                     // Gọi phương thức signup
                     bankService.simpleSignUp(formNo, cardNumber, pin);
@@ -156,10 +158,11 @@ public class RMIClient extends JFrame implements ActionListener {
                     signupFrame.setVisible(false);  // Đóng khung đăng ký
                 } catch (Exception e) {
                     e.printStackTrace();
-                    JOptionPane.showMessageDialog(signupFrame, "Sign Up Failed!");
+                    JOptionPane.showMessageDialog(signupFrame, "Sign Up Failed: " + e.getMessage());
                 }
             }
         });
+
 
         // Hiển thị khung đăng ký
         signupFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
