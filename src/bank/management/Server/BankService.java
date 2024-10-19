@@ -4,18 +4,18 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 public interface BankService extends Remote {
-    // Method to check balance for a given account pin (read operation, suitable for slave servers)
+    // Kiểm tra số dư (chỉ đọc, thực hiện qua Slave)
     double checkBalance(String pin) throws RemoteException;
 
-    // Method to deposit money into an account (write operation, should be handled by the master server)
+    // Gửi tiền (ghi dữ liệu vào Master)
     void deposit(String pin, double amount) throws RemoteException;
 
-    // Method to withdraw money from an account (write operation, should be handled by the master server)
+    // Rút tiền (ghi dữ liệu vào Master)
     void withdraw(String pin, double amount) throws RemoteException;
 
-    // Method to create a new account (write operation, handled by the master server)
+    // Đăng ký tài khoản mới (ghi dữ liệu vào Master)
     void simpleSignUp(String formno, String cardNumber, String pin) throws RemoteException;
 
-    // Method to validate user login (read operation, suitable for slave servers)
+    // Xác thực đăng nhập (chỉ đọc, thực hiện qua Slave)
     boolean validateLogin(String cardNumber, String pin) throws RemoteException;
 }

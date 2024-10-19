@@ -1,113 +1,109 @@
 package bank.management.Server;
 
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class SlaveBankServiceImpl implements BankService {
-    
-    // Kết nối đến cơ sở dữ liệu con
-    private Connection connect() throws Exception {
-        Class.forName("com.mysql.cj.jdbc.Driver");
-        return DriverManager.getConnection("jdbc:mysql://localhost:3306/bank_con", "root", "12345"); // CSDL con
+class SlaveBankServiceImpl implements BankService {
+    private Connection slaveConnection;
+
+    // Địa chỉ và cổng của Master Server
+    private final String masterHost = "localhost";
+    private final int masterPort = 1236; // Thay đổi port này nếu cần
+
+    public SlaveBankServiceImpl() throws RemoteException {
+        try {
+            // Kết nối đến DatabaseSlave
+            slaveConnection = DriverManager.getConnection("jdbc:mysql://localhost:3306/bank", "root", "");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
+    // Kiểm tra số dư từ DatabaseSlave
     @Override
     public double checkBalance(String pin) throws RemoteException {
-        try (Connection con = connect(); Statement stmt = con.createStatement()) {
+        try (Statement stmt = slaveConnection.createStatement()) {
             String query = "SELECT amount FROM bank WHERE pin = '" + pin + "'";
             ResultSet rs = stmt.executeQuery(query);
             if (rs.next()) {
                 return rs.getDouble("amount");
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
-            throw new RemoteException("Error while checking balance: " + e.getMessage());
+            throw new RemoteException("SQL error during balance check: " + e.getMessage(), e);
         }
         return 0;
     }
 
+    // Gửi tiền: Gọi đến Master Server để xử lý
     @Override
     public synchronized void deposit(String pin, double amount) throws RemoteException {
-        try (Connection con = connect(); Statement stmt = con.createStatement()) {
-            String query = "UPDATE bank SET amount = amount + " + amount + " WHERE pin = '" + pin + "'";
-            stmt.executeUpdate(query);
-            String transactionQuery = "INSERT INTO bank (pin, date, type, amount) VALUES ('" + pin + "', NOW(), 'Deposit', " + amount + ")";
-            stmt.executeUpdate(transactionQuery);
+        try {
+            // Kết nối tới Master Server qua RMI
+            Registry registry = LocateRegistry.getRegistry(masterHost, masterPort);
+            BankService masterService = (BankService) registry.lookup("BankService");
+
+            // Gọi phương thức gửi tiền trên Master Server
+            masterService.deposit(pin, amount);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RemoteException("An error occurred during deposit.");
+            throw new RemoteException("Error during deposit: " + e.getMessage(), e);
         }
     }
 
+    // Rút tiền: Gọi đến Master Server để xử lý
     @Override
     public synchronized void withdraw(String pin, double amount) throws RemoteException {
-        try (Connection con = connect(); Statement stmt = con.createStatement()) {
-            String balanceQuery = "SELECT amount FROM bank WHERE pin = '" + pin + "'";
-            ResultSet rs = stmt.executeQuery(balanceQuery);
-            if (rs.next()) {
-                double currentBalance = rs.getDouble("amount");
-                if (currentBalance < amount) {
-                    throw new RemoteException("Insufficient balance.");
-                }
+        try {
+            // Kết nối tới Master Server qua RMI
+            Registry registry = LocateRegistry.getRegistry(masterHost, masterPort);
+            BankService masterService = (BankService) registry.lookup("BankService");
 
-                String query = "UPDATE bank SET amount = amount - " + amount + " WHERE pin = '" + pin + "'";
-                stmt.executeUpdate(query);
-                String transactionQuery = "INSERT INTO bank (pin, date, type, amount) VALUES ('" + pin + "', NOW(), 'Withdrawal', " + amount + ")";
-                stmt.executeUpdate(transactionQuery);
-            } else {
-                throw new RemoteException("Account not found.");
-            }
+            // Gọi phương thức rút tiền trên Master Server
+            masterService.withdraw(pin, amount);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RemoteException("An error occurred during withdrawal.");
+            throw new RemoteException("Error during withdrawal: " + e.getMessage(), e);
         }
     }
 
+    // Đăng ký tài khoản mới: Gọi đến Master Server để xử lý
     @Override
     public void simpleSignUp(String formNo, String cardNumber, String pin) throws RemoteException {
-        try (Connection con = connect(); Statement stmt = con.createStatement()) {
-            // Kiểm tra xem tài khoản đã tồn tại chưa
-            String checkQuery = "SELECT * FROM login WHERE card_number = '" + cardNumber + "'";
-            ResultSet rs = stmt.executeQuery(checkQuery);
-            if (rs.next()) {
-                throw new RemoteException("Account already exists with this card number.");
-            }
+        try {
+            // Kết nối tới Master Server qua RMI
+            Registry registry = LocateRegistry.getRegistry(masterHost, masterPort);
+            BankService masterService = (BankService) registry.lookup("BankService");
 
-            // Đăng ký tài khoản mới
-            String query = "INSERT INTO login (formno, card_number, pin) VALUES ('" + formNo + "', '" + cardNumber + "', '" + pin + "')";
-            stmt.executeUpdate(query);
-            
-            // Tạo tài khoản ngân hàng với số dư ban đầu
-            String accountQuery = "INSERT INTO bank (pin, amount, date) VALUES ('" + pin + "', 0, NOW())";
-
-            stmt.executeUpdate(accountQuery);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RemoteException("SQL error during sign up: " + e.getMessage(), e);
+            // Gọi phương thức đăng ký trên Master Server
+            masterService.simpleSignUp(formNo, cardNumber, pin);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RemoteException("An error occurred during sign up: " + e.getMessage(), e);
+            throw new RemoteException("Error during sign up: " + e.getMessage(), e);
         }
     }
 
-
-    public void syncTransaction(String transactionType, String pin, double amount) throws RemoteException {
-        // Implement synchronization logic if necessary
-    }
-
+    // Xác thực đăng nhập từ DatabaseSlave
     @Override
     public boolean validateLogin(String cardNumber, String pin) throws RemoteException {
-        try (Connection con = connect(); Statement stmt = con.createStatement()) {
+        try (Statement stmt = slaveConnection.createStatement()) {
             String query = "SELECT * FROM login WHERE card_number = '" + cardNumber + "' AND pin = '" + pin + "'";
             ResultSet rs = stmt.executeQuery(query);
-            return rs.next();  // If found, login is valid
-        } catch (Exception e) {
+            return rs.next();  // Nếu tìm thấy, đăng nhập hợp lệ
+        } catch (SQLException e) {
             e.printStackTrace();
-            throw new RemoteException("An error occurred during login validation.");
+            throw new RemoteException("SQL error during login validation: " + e.getMessage(), e);
         }
+    }
+
+    // Không thực hiện đồng bộ giao dịch trên Slave Server
+    public void syncTransaction(String transactionType, String pin, double amount) throws RemoteException {
+        throw new RemoteException("This operation should be handled by the Master Server.");
     }
 }

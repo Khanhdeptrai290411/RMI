@@ -8,13 +8,11 @@ import java.awt.event.ActionListener;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-
 import bank.management.Server.BankService;
 
 class MainClass extends JFrame implements ActionListener {
@@ -81,32 +79,38 @@ class MainClass extends JFrame implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         try {
-            if (e.getSource() == b1) { // Nạp tiền (Ghi - sử dụng Master)
-                Registry masterRegistry = LocateRegistry.getRegistry("localhost", 1235);  // Kết nối đến Master
-                BankService masterBankService = (BankService) masterRegistry.lookup("BankService");
+            // Kết nối đến RMIServerSlave
+            Registry slaveRegistry = LocateRegistry.getRegistry("localhost", 1243);  // Kết nối tới Slave Server
+            BankService slaveBankService = (BankService) slaveRegistry.lookup("BankService");
 
+            if (e.getSource() == b1) { // Nạp tiền (Ghi qua Slave Server, Slave sẽ gọi tới Master)
                 String amountStr = JOptionPane.showInputDialog("Enter amount to deposit:");
-                double amount = Double.parseDouble(amountStr);
-                masterBankService.deposit(pin, amount);
-                JOptionPane.showMessageDialog(null, "Rs. " + amount + " Deposited Successfully");
-
-            } else if (e.getSource() == b2) { // Rút tiền (Ghi - sử dụng Master)
-                Registry masterRegistry = LocateRegistry.getRegistry("localhost", 1235);  // Kết nối đến Master
-                BankService masterBankService = (BankService) masterRegistry.lookup("BankService");
-
-                String amountStr = JOptionPane.showInputDialog("Enter amount to withdraw:");
-                double amount = Double.parseDouble(amountStr);
-                try {
-                    masterBankService.withdraw(pin, amount);
-                    JOptionPane.showMessageDialog(null, "Rs. " + amount + " Withdrawn Successfully");
-                } catch (RemoteException ex) {
-                    JOptionPane.showMessageDialog(null, "Not enough money to withdraw");
+                if (amountStr != null && !amountStr.isEmpty()) {
+                    double amount = Double.parseDouble(amountStr);
+                    if (amount > 0) {
+                        // Gửi yêu cầu nạp tiền qua Slave Server (Slave sẽ gọi Master)
+                        slaveBankService.deposit(pin, amount);
+                        JOptionPane.showMessageDialog(null, "Rs. " + amount + " Deposited Successfully");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Invalid amount entered.");
+                    }
                 }
 
-            } else if (e.getSource() == b6) { // Kiểm tra số dư (Đọc - sử dụng Slave)
-                Registry slaveRegistry = LocateRegistry.getRegistry("localhost", 1243);  // Kết nối đến Slave
-                BankService slaveBankService = (BankService) slaveRegistry.lookup("BankService");
+            } else if (e.getSource() == b2) { // Rút tiền (Ghi qua Slave Server, Slave sẽ gọi tới Master)
+                String amountStr = JOptionPane.showInputDialog("Enter amount to withdraw:");
+                if (amountStr != null && !amountStr.isEmpty()) {
+                    double amount = Double.parseDouble(amountStr);
+                    try {
+                        // Gửi yêu cầu rút tiền qua Slave Server (Slave sẽ gọi Master)
+                        slaveBankService.withdraw(pin, amount);
+                        JOptionPane.showMessageDialog(null, "Rs. " + amount + " Withdrawn Successfully");
+                    } catch (RemoteException ex) {
+                        JOptionPane.showMessageDialog(null, "Not enough money to withdraw");
+                    }
+                }
 
+            } else if (e.getSource() == b6) { // Kiểm tra số dư (Chỉ đọc - thực hiện qua Slave)
+                // Thực hiện kiểm tra số dư qua Slave Server
                 double balance = slaveBankService.checkBalance(pin);
                 JOptionPane.showMessageDialog(null, "Your Current Balance is Rs. " + balance);
 
