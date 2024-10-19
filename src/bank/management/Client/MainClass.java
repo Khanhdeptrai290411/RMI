@@ -1,4 +1,5 @@
 package bank.management.Client;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Image;
@@ -13,7 +14,8 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import bank.management.Server.BankService; 
+
+import bank.management.Server.BankService;
 
 class MainClass extends JFrame implements ActionListener {
     JButton b1, b2, b3, b4, b5, b6, b7;
@@ -49,10 +51,6 @@ class MainClass extends JFrame implements ActionListener {
         b2.addActionListener(this);
         l3.add(b2);
 
-
-
-
-
         b5 = new JButton("PIN CHANGE");
         b5.setForeground(Color.WHITE);
         b5.setBackground(new Color(65, 125, 128));
@@ -80,44 +78,48 @@ class MainClass extends JFrame implements ActionListener {
         setVisible(true);
     }
 
-
-
     @Override
     public void actionPerformed(ActionEvent e) {
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost", 1243);  // Corrected port
-            BankService bankService = (BankService) registry.lookup("BankService");
+            if (e.getSource() == b1) { // Nạp tiền (Ghi - sử dụng Master)
+                Registry masterRegistry = LocateRegistry.getRegistry("localhost", 1235);  // Kết nối đến Master
+                BankService masterBankService = (BankService) masterRegistry.lookup("BankService");
 
-            if (e.getSource() == b1) {
                 String amountStr = JOptionPane.showInputDialog("Enter amount to deposit:");
                 double amount = Double.parseDouble(amountStr);
-                bankService.deposit(pin, amount);
+                masterBankService.deposit(pin, amount);
                 JOptionPane.showMessageDialog(null, "Rs. " + amount + " Deposited Successfully");
-            } else if (e.getSource() == b2) {
+
+            } else if (e.getSource() == b2) { // Rút tiền (Ghi - sử dụng Master)
+                Registry masterRegistry = LocateRegistry.getRegistry("localhost", 1235);  // Kết nối đến Master
+                BankService masterBankService = (BankService) masterRegistry.lookup("BankService");
+
                 String amountStr = JOptionPane.showInputDialog("Enter amount to withdraw:");
                 double amount = Double.parseDouble(amountStr);
                 try {
-                    bankService.withdraw(pin, amount);
+                    masterBankService.withdraw(pin, amount);
                     JOptionPane.showMessageDialog(null, "Rs. " + amount + " Withdrawn Successfully");
                 } catch (RemoteException ex) {
-                    JOptionPane.showMessageDialog(null, "Not enough money to withdraw");  // Hiển thị thông báo lỗi nếu không đủ tiền
+                    JOptionPane.showMessageDialog(null, "Not enough money to withdraw");
                 }
-            } else if (e.getSource() == b6) {
-                double balance = bankService.checkBalance(pin);
+
+            } else if (e.getSource() == b6) { // Kiểm tra số dư (Đọc - sử dụng Slave)
+                Registry slaveRegistry = LocateRegistry.getRegistry("localhost", 1243);  // Kết nối đến Slave
+                BankService slaveBankService = (BankService) slaveRegistry.lookup("BankService");
+
+                double balance = slaveBankService.checkBalance(pin);
                 JOptionPane.showMessageDialog(null, "Your Current Balance is Rs. " + balance);
+
             } else if (e.getSource() == b7) {
                 System.exit(0);
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null, "An error occurred: " + ex.getMessage()); // Hiển thị thông báo lỗi
+            JOptionPane.showMessageDialog(null, "An error occurred: " + ex.getMessage());
             ex.printStackTrace();
         }
     }
 
-
-
-
     public static void main(String[] args) {
-        new MainClass("1234");
+        new MainClass("");
     }
 }

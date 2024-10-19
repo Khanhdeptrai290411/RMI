@@ -55,8 +55,8 @@ public class RMIClient extends JFrame implements ActionListener {
         b1.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent ae) {
                 try {
-                    // Kết nối tới RMI server
-                    Registry registry = LocateRegistry.getRegistry("localhost", 1243);
+                    // Kết nối tới Master Server thay vì localhost
+                    Registry registry = LocateRegistry.getRegistry("localhost", 1235);  // Sửa "master-server-host" thành địa chỉ IP/hostname của Master Server
                     BankService bankService = (BankService) registry.lookup("BankService");
 
                     // Lấy thông tin đăng nhập
@@ -146,9 +146,9 @@ public class RMIClient extends JFrame implements ActionListener {
                 // Log the data being sent
                 System.out.println("Attempting to sign up with FormNo: " + formNo + ", CardNumber: " + cardNumber + ", PIN: " + pin);
 
-                // Kết nối tới RMI server
+                // Kết nối tới Master Server thay vì localhost
                 try {
-                    Registry registry = LocateRegistry.getRegistry("localhost", 1243);
+                    Registry registry = LocateRegistry.getRegistry("localhost", 1234);  // Sửa "master-server-host" thành địa chỉ IP/hostname của Master Server
                     BankService bankService = (BankService) registry.lookup("BankService");
 
                     // Gọi phương thức signup

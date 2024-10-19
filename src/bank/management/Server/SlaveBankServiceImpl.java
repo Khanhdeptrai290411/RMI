@@ -95,7 +95,6 @@ public class SlaveBankServiceImpl implements BankService {
     }
 
 
-    @Override
     public void syncTransaction(String transactionType, String pin, double amount) throws RemoteException {
         // Implement synchronization logic if necessary
     }
