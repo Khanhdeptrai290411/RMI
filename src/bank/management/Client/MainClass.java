@@ -48,6 +48,13 @@ class MainClass extends JFrame implements ActionListener {
         b2.setBounds(700, 274, 150, 35);
         b2.addActionListener(this);
         l3.add(b2);
+        b4 = new JButton("TRANSFER");
+        b4.setForeground(Color.WHITE);
+        b4.setBackground(new Color(65, 125, 128));
+        b4.setBounds(410, 406, 150, 35);
+        b4.addActionListener(this);
+        l3.add(b4);
+
 
         b5 = new JButton("PIN CHANGE");
         b5.setForeground(Color.WHITE);
@@ -116,7 +123,22 @@ class MainClass extends JFrame implements ActionListener {
 
             } else if (e.getSource() == b7) {
                 System.exit(0);
+            }else if (e.getSource() == b4) { // Chuyển tiền
+                String receiverPin = JOptionPane.showInputDialog("Enter receiver PIN:");
+                String amountStr = JOptionPane.showInputDialog("Enter amount to transfer:");
+
+                if (receiverPin != null && !receiverPin.isEmpty() && amountStr != null && !amountStr.isEmpty()) {
+                    double amount = Double.parseDouble(amountStr);
+                    try {
+                        // Thực hiện chuyển tiền qua Slave Server (Slave sẽ gọi Master)
+                        slaveBankService.transfer(pin, receiverPin, amount);
+                        JOptionPane.showMessageDialog(null, "Rs. " + amount + " Transferred Successfully");
+                    } catch (RemoteException ex) {
+                        JOptionPane.showMessageDialog(null, "Error during transfer: " + ex.getMessage());
+                    }
+                }
             }
+
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null, "An error occurred: " + ex.getMessage());
             ex.printStackTrace();

@@ -7,7 +7,10 @@ import java.rmi.server.UnicastRemoteObject;
 public class RMIServer {
     public static void main(String[] args) {
         try {
-            // Tạo đối tượng BankServiceImpl cho Master Server (chỉ để ghi dữ liệu)
+            // Chỉ định IP mà RMI server sẽ trả về cho client
+            System.setProperty("java.rmi.server.hostname", "172.20.10.4");  // Thay bằng địa chỉ IPv4 của bạn
+
+            // Tạo đối tượng BankServiceImpl cho Master Server
             BankServiceImpl bankService = new BankServiceImpl();
 
             // Xuất đối tượng bankService để nó có thể được gọi từ xa

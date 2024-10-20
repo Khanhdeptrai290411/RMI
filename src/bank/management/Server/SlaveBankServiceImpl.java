@@ -13,7 +13,7 @@ class SlaveBankServiceImpl implements BankService {
     private Connection slaveConnection;
 
     // Địa chỉ và cổng của Master Server
-    private final String masterHost = "localhost";
+    private final String masterHost = "172.20.10.4";
     private final int masterPort = 1236; // Thay đổi port này nếu cần
 
     public SlaveBankServiceImpl() throws RemoteException {
@@ -86,6 +86,20 @@ class SlaveBankServiceImpl implements BankService {
         } catch (Exception e) {
             e.printStackTrace();
             throw new RemoteException("Error during sign up: " + e.getMessage(), e);
+        }
+    }
+    @Override
+    public synchronized void transfer(String senderPin, String receiverPin, double amount) throws RemoteException {
+        try {
+            // Kết nối tới Master Server qua RMI
+            Registry registry = LocateRegistry.getRegistry(masterHost, masterPort);
+            BankService masterService = (BankService) registry.lookup("BankService");
+
+            // Gọi phương thức chuyển tiền trên Master Server
+            masterService.transfer(senderPin, receiverPin, amount);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RemoteException("Error during transfer: " + e.getMessage(), e);
         }
     }
 
